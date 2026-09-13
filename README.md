@@ -45,16 +45,16 @@ flowchart TD
 
 ## 💻 Tech Stack
 
-* **Frontend:** Vanilla JavaScript, HTML5, CSS3, Leaflet.js, Chart.js
-* **Backend:** Java 21, Spring Boot 3, Spring Web, Spring Kafka, Spring Data JPA
-* **Message Broker:** Apache Kafka (Hosted on Aiven Cloud)
-* **Database:** MySQL (Hosted on TiDB Serverless)
+**Frontend:** Vanilla JavaScript, HTML5, CSS3, Leaflet.js, Chart.js  
+**Backend:** Java 17, Spring Boot, Spring Web, Spring Kafka, Spring Data JPA  
+**Message Broker:** Apache Kafka (Hosted on Aiven Cloud)  
+**Database:** MySQL (Hosted on TiDB Serverless)  
 
 ## 🚀 How to Run Locally
 
 ### 1. Prerequisites
 Ensure you have the following installed:
-- Java 21+
+- Java 17+
 - Gradle
 
 ### 2. Configure Database & Kafka (Securely)
