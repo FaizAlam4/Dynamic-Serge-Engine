@@ -33,9 +33,9 @@ spring:
         spring.json.trusted.packages: "*"
 
   datasource:
-    url: jdbc:mysql://gateway01.us-east-1.prod.aws.tidbcloud.com:4000/test?ssl=true
-    username: 237hEU9rNqZWQPW.root
-    password: Vzozp2xikSC314oT
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:

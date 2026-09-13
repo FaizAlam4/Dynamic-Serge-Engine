@@ -15,8 +15,8 @@ public class KafkaConfig {
     @Bean
     public NewTopic rideRequestsTopic() {
         return TopicBuilder.name("ride-requests")
-                .partitions(3)
-                .replicas(1)
+                .partitions(1)
+                .replicas(2)
                 .build();
     }
 }

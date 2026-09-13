@@ -57,21 +57,20 @@ Ensure you have the following installed:
 - Java 21+
 - Gradle
 
-### 2. Configure Database & Kafka
-This project requires an active MySQL connection and an Apache Kafka cluster. Update your `src/main/resources/application.properties` with your credentials:
-```properties
-spring.datasource.url=jdbc:mysql://<your-db-url>:4000/test?ssl=true
-spring.datasource.username=<user>
-spring.datasource.password=<pass>
-
-spring.kafka.bootstrap-servers=<your-kafka-url>:22407
-spring.kafka.properties.security.protocol=SSL
+### 2. Configure Database & Kafka (Securely)
+This project requires an active MySQL connection and an Apache Kafka cluster. Do **NOT** hardcode your credentials! 
+Create a `.env` file in the root directory (it is ignored by Git) and add your credentials:
+```env
+DB_URL="jdbc:mysql://<your-db-url>:4000/test?ssl=true"
+DB_USERNAME="<your-username>"
+DB_PASSWORD="<your-password>"
 ```
+*(Your Kafka SSL certificates `ca.pem`, `service.cert`, and `service.key` should be placed in `src/main/resources/`)*
 
 ### 3. Start the Server
-Open your terminal and run:
+Open your terminal and run the helper script (which loads the `.env` and starts Spring Boot):
 ```bash
-./gradlew bootRun
+./run.sh
 ```
 
 ### 4. Interact with the Dashboard
@@ -83,6 +82,13 @@ http://localhost:8080
 - **Watch the Surge:** As a zone crosses 5 active rides, the price will surge to `1.5x` and the map will turn yellow. At 10 rides, it surges to `2.0x` and turns red.
 - **Observe the Auto-Decay:** Stop clicking and watch the Chart.js graph. After 8 seconds, the simulated drivers will arrive, the rides will complete, and the surge will naturally decay back to 1.0x!
 - **Emergency Reset:** If the map gets too crazy, click the red **🚨 EMERGENCY SYSTEM RESET 🚨** button to instantly flush the entire Kafka pipeline back to zero.
+
+## 🐳 Docker Deployment
+
+This repository includes a multi-stage `Dockerfile`. You can easily deploy this engine to any cloud provider (Render, Railway, AWS, DigitalOcean) with zero configuration:
+1. Connect your GitHub repository to your cloud provider.
+2. Add `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` to your provider's Environment Variables dashboard.
+3. Deploy! The Dockerfile will automatically build the Gradle project and launch the server.
 
 ## 👨‍💻 Author
 **Faiz Alam** 
