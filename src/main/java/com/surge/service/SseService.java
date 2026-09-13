@@ -17,6 +17,13 @@ public class SseService {
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE); // Keep alive forever
         this.emitters.add(emitter);
         
+        try {
+            // Force Nginx to flush headers immediately by sending a tiny chunk of valid JSON data
+            emitter.send(new java.util.ArrayList<>());
+        } catch (IOException e) {
+            this.emitters.remove(emitter);
+        }
+
         emitter.onCompletion(() -> this.emitters.remove(emitter));
         emitter.onTimeout(() -> this.emitters.remove(emitter));
         emitter.onError((e) -> this.emitters.remove(emitter));
