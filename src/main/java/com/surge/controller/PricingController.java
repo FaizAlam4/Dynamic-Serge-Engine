@@ -25,9 +25,18 @@ public class PricingController {
     private final KafkaTemplate<Object, Object> kafkaTemplate;
     private final SseService sseService;
 
+    // HEALTH CHECK FOR CRON.JOB.ORG
+    @GetMapping("/health")
+    public String healthCheck() {
+        return "OK";
+    }
+
     // INTERACTIVE FEATURE: Real-time UI updates (No more polling!)
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamPricing() {
+    public SseEmitter streamPricing(jakarta.servlet.http.HttpServletResponse response) {
+        // Prevent Render.com / Nginx from buffering the Server-Sent Events!
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache");
         return sseService.createEmitter();
     }
 
