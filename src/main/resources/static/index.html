@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Surge Pricing Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #0f172a; 
+            color: #f8fafc; 
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            padding: 20px 40px;
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        h1 { 
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin: 0;
+            background: -webkit-linear-gradient(#38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .badges {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .badge {
+            background: #0f172a;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Map Section */
+        #map {
+            flex: 2;
+            height: 100%;
+            background: #000;
+            user-select: none;
+            touch-action: none; /* Prevents trackpad/mobile double-tap zoom */
+        }
+
+        /* Dashboard Section */
+        .dashboard-panel {
+            flex: 1.2;
+            background: #0f172a;
+            padding: 25px;
+            overflow-y: auto;
+            border-left: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .zone-card { 
+            background-color: #1e293b; 
+            padding: 20px; 
+            border-radius: 12px; 
+            transition: all 0.3s ease;
+            border: 2px solid #334155;
+            position: relative;
+        }
+        
+        .high-surge { border-color: #ef4444; background: linear-gradient(180deg, rgba(239,68,68,0.15) 0%, #1e293b 100%); }
+        .medium-surge { border-color: #f59e0b; background: linear-gradient(180deg, rgba(245,158,11,0.15) 0%, #1e293b 100%); }
+        .normal { border-color: #10b981; }
+
+        .zone-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .zone-title {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #e2e8f0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .multiplier {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem; 
+            font-weight: 700; 
+        }
+        
+        .high-surge .multiplier { color: #fca5a5; }
+        .medium-surge .multiplier { color: #fcd34d; }
+        .normal .multiplier { color: #6ee7b7; }
+        
+        .stats-bar {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .rides-count { color: #e2e8f0; font-weight: 600; }
+        .time { font-family: monospace; font-size: 0.8rem; color: #94a3b8; }
+        
+        /* Vehicle Pricing Table */
+        .pricing-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .pricing-table td {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .pricing-table td:last-child { text-align: right; font-family: 'JetBrains Mono'; font-weight: 700; color: #e2e8f0; }
+        .pricing-table tr:last-child td { border-bottom: none; }
+        .car-type { color: #94a3b8; font-size: 0.95rem; }
+
+        .instructions {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .instructions h3 {
+            color: #38bdf8;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+        }
+
+        .instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .instructions b {
+            color: #e2e8f0;
+        }
+
+        .reset-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: 0.2s;
+        }
+        .reset-btn:hover { background: #dc2626; }
+
+        .chart-container {
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            margin-top: 10px;
+            height: 250px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-container h3 {
+            color: #e2e8f0;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Dynamic Surge Engine</h1>
+        <div class="badges">
+            <span class="badge">Leaflet Map</span>
+            <span class="badge">Spring Boot</span>
+            <span class="badge">Kafka</span>
+            <span class="badge">MySQL Database</span>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Interactive Map -->
+        <div id="map"></div>
+
+        <!-- Live Pricing Dashboard -->
+        <div class="dashboard-panel" id="dashboard">
+            <button class="reset-btn" onclick="fetch('/api/reset', {method: 'POST'})">🚨 EMERGENCY SYSTEM RESET 🚨</button>
+            <div class="instructions">
+                <h3>System Architecture & Rules</h3>
+                <p style="margin-top: 0; margin-bottom: 10px;"><i>Clicking the map triggers an instant distributed pipeline:</i></p>
+                <ol>
+                    <li><b>The Trigger:</b> Spam-click the map to publish Ride Events to <b>Aiven Apache Kafka</b> via a REST API.</li>
+                    <li><b>Surge Math (Consumer):</b> A Listener instantly consumes the event. If a zone exceeds <b>5 rides</b>, it surges to <b>1.5x</b>. If it exceeds <b>10 rides</b>, it surges to <b>2.0x</b>!</li>
+                    <li><b>Instant UI (SSE):</b> The math is instantly pushed to this browser via <b>Server-Sent Events</b>.</li>
+                    <li><b>Auto-Decay:</b> After 8 seconds, the backend automatically dispatches a "COMPLETE" event to mimic a driver arriving, naturally cooling down the surge!</li>
+                    <li><b>Batch Upsert:</b> An async worker flushes the exact state to <b>MySQL</b> every 1 second to prevent DB crashing!</li>
+                </ol>
+            </div>
+            
+            <!-- Live Analytics Chart -->
+            <div class="chart-container">
+                <h3>Live Surge Analytics</h3>
+                <div style="position: relative; flex-grow: 1; min-height: 180px;">
+                    <canvas id="surgeChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Cards injected via JS -->
+            <div id="cards-container"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // --- 1. INITIALIZE MAP ---
+        // Center on Bengaluru (Bangalore), India - The tech and traffic capital!
+        // We disable doubleClickZoom so you can spam-click to build up surge quickly!
+        const map = L.map('map', { doubleClickZoom: false }).setView([12.9716, 77.5946], 12);
+        
+        // Forcefully disable double-click zoom just in case the option didn't catch it
+        map.doubleClickZoom.disable();
+        map.on('dblclick', function(e) { e.originalEvent.preventDefault(); });
+        
+        // Standard OpenStreetMap tiles (100% Free, No API Key Required)
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // --- 2. DRAW ZONES ---
+        // Coordinates for a 2x2 grid around Bangalore
+        // Center: 12.97, 77.59
+        const zones = {
+            "North": { color: "#38bdf8", bounds: [[12.97, 77.51], [13.05, 77.59]] }, // North-West quadrant
+            "East":  { color: "#10b981", bounds: [[12.97, 77.59], [13.05, 77.67]] }, // North-East quadrant
+            "South": { color: "#f43f5e", bounds: [[12.89, 77.59], [12.97, 77.67]] }, // South-East quadrant
+            "West":  { color: "#f59e0b", bounds: [[12.89, 77.51], [12.97, 77.59]] }  // South-West quadrant
+        };
+
+        const zoneRects = {};
+
+        for (const [zoneName, data] of Object.entries(zones)) {
+            zoneRects[zoneName] = L.rectangle(data.bounds, {
+                color: data.color,
+                weight: 2,
+                fillColor: data.color,
+                fillOpacity: 0.1
+            }).addTo(map);
+            zoneRects[zoneName].bindTooltip(zoneName + " Zone", {permanent: true, direction: "center", className: "zone-tooltip"});
+        }
+
+        // --- 3. MAP CLICK EVENTS (ORGANIC RIDES) ---
+        map.on('click', async function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
+            // Find which zone was clicked
+            let clickedZone = null;
+            for (const [zoneName, data] of Object.entries(zones)) {
+                if (zoneRects[zoneName].getBounds().contains(e.latlng)) {
+                    clickedZone = zoneName;
+                    break;
+                }
+            }
+
+            if (clickedZone) {
+                // Drop a marker
+                const marker = L.circleMarker([lat, lng], {
+                    color: '#fff', fillColor: '#38bdf8', fillOpacity: 1, radius: 5
+                }).addTo(map);
+                
+                // Fade marker out after 2 seconds (simulating pickup)
+                setTimeout(() => map.removeLayer(marker), 2000);
+
+                // Call API to add 1 organic ride
+                await fetch(`/api/request-ride/${clickedZone}`, { method: 'POST' });
+            }
+        });
+
+        // --- 4. DASHBOARD LOGIC ---
+        
+        const basePrices = {
+            "UberX": 350.00,
+            "UberXL": 550.00,
+            "UberBlack": 850.00
+        };
+
+        async function fetchInitialPrices() {
+            try {
+                const response = await fetch('/api/pricing');
+                const data = await response.json();
+                
+                const container = document.getElementById('cards-container');
+                let html = '';
+
+                data.forEach(zoneData => {
+                    let surgeClass = 'normal';
+                    if (zoneData.surgeMultiplier >= 2.0) surgeClass = 'high-surge';
+                    else if (zoneData.surgeMultiplier >= 1.5) surgeClass = 'medium-surge';
+
+                    html += `
+                        <div class="zone-card ${surgeClass}" id="card-${zoneData.zone}">
+                            <div class="zone-header">
+                                <div class="zone-title">${zoneData.zone} Zone</div>
+                                <div class="multiplier" id="price-${zoneData.zone}">${zoneData.surgeMultiplier.toFixed(1)}x</div>
+                            </div>
+                            
+                            <div class="stats-bar">
+                                <div class="rides-count" id="rides-${zoneData.zone}">🟢 Active Rides: ${zoneData.activeRides}</div>
+                                <div class="time" id="time-${zoneData.zone}">...</div>
+                            </div>
+                            
+                            <table class="pricing-table">
+                                <tr>
+                                    <td class="car-type">UberX (Standard)</td>
+                                    <td id="uberx-${zoneData.zone}">₹${(basePrices.UberX * zoneData.surgeMultiplier).toFixed(0)}</td>
+                                </tr>
+                                <tr>
+                                    <td class="car-type">UberXL (6 Seats)</td>
+                                    <td id="uberxl-${zoneData.zone}">₹${(basePrices.UberXL * zoneData.surgeMultiplier).toFixed(0)}</td>
+                                </tr>
+                                <tr>
+                                    <td class="car-type">Uber Premier (Luxury)</td>
+                                    <td id="uberblack-${zoneData.zone}">₹${(basePrices.UberBlack * zoneData.surgeMultiplier).toFixed(0)}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } catch (error) {
+                console.error("Error fetching initial API:", error);
+            }
+        }
+
+        fetchInitialPrices();
+
+        // --- 5. SSE REAL-TIME UPDATES ---
+        const evtSource = new EventSource("/api/stream");
+        
+        evtSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+
+            data.forEach(zoneData => {
+                const card = document.getElementById('card-' + zoneData.zone);
+                if (!card) return;
+
+                const mult = zoneData.surgeMultiplier;
+
+                // Surgically update just the numbers! (Blazing fast)
+                document.getElementById('price-' + zoneData.zone).innerText = mult.toFixed(1) + 'x';
+                document.getElementById('rides-' + zoneData.zone).innerText = '🟢 Active Rides: ' + zoneData.activeRides;
+                
+                // Update specific vehicle prices
+                document.getElementById('uberx-' + zoneData.zone).innerText = '₹' + (basePrices.UberX * mult).toFixed(0);
+                document.getElementById('uberxl-' + zoneData.zone).innerText = '₹' + (basePrices.UberXL * mult).toFixed(0);
+                document.getElementById('uberblack-' + zoneData.zone).innerText = '₹' + (basePrices.UberBlack * mult).toFixed(0);
+                
+                let timeString = zoneData.lastUpdated;
+                try {
+                    const d = new Date(timeString);
+                    timeString = d.toLocaleTimeString() + "." + d.getMilliseconds().toString().padStart(3, '0');
+                } catch(e) {}
+                document.getElementById('time-' + zoneData.zone).innerText = timeString;
+
+                // Surgically update the color class
+                card.className = 'zone-card'; // Reset
+                if (mult >= 2.0) {
+                    card.classList.add('high-surge');
+                    zoneRects[zoneData.zone].setStyle({ fillOpacity: 0.5, color: '#ef4444', fillColor: '#ef4444' }); // Red map
+                }
+                else if (mult >= 1.5) {
+                    card.classList.add('medium-surge');
+                    zoneRects[zoneData.zone].setStyle({ fillOpacity: 0.3, color: '#f59e0b', fillColor: '#f59e0b' }); // Yellow map
+                }
+                else {
+                    card.classList.add('normal');
+                    // Reset to original zone color
+                    zoneRects[zoneData.zone].setStyle({ fillOpacity: 0.1, color: zones[zoneData.zone].color, fillColor: zones[zoneData.zone].color });
+                }
+            });
+        };
+
+        // --- 6. LIVE ANALYTICS CHART ---
+        const ctx = document.getElementById('surgeChart').getContext('2d');
+        const chartData = {
+            labels: [],
+            datasets: [
+                { label: 'North', data: [], borderColor: '#38bdf8', backgroundColor: '#38bdf8', tension: 0.4 },
+                { label: 'East',  data: [], borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.4 },
+                { label: 'South', data: [], borderColor: '#f43f5e', backgroundColor: '#f43f5e', tension: 0.4 },
+                { label: 'West',  data: [], borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.4 }
+            ]
+        };
+
+        const surgeChart = new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 0 }, // Disable animation for real-time feel
+                scales: {
+                    y: { 
+                        min: 1.0, 
+                        max: 2.5,
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { display: false } // Hide time labels to save space
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#e2e8f0' } }
+                }
+            }
+        });
+
+        // Record the current state into the chart every 2 seconds
+        setInterval(() => {
+            const now = new Date().toLocaleTimeString();
+            chartData.labels.push(now);
+            
+            // Limit chart to last 30 data points (60 seconds)
+            if (chartData.labels.length > 30) {
+                chartData.labels.shift();
+                chartData.datasets.forEach(ds => ds.data.shift());
+            }
+
+            // Pull current value from the DOM directly to avoid state desync!
+            chartData.datasets.forEach(ds => {
+                const zone = ds.label;
+                const priceElement = document.getElementById('price-' + zone);
+                if (priceElement) {
+                    const multText = priceElement.innerText.replace('x', '');
+                    ds.data.push(parseFloat(multText));
+                } else {
+                    ds.data.push(1.0); // Fallback if not loaded
+                }
+            });
+
+            surgeChart.update();
+        }, 2000);
+
+    </script>
+</body>
+</html>
