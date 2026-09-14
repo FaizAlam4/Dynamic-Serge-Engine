@@ -88,10 +88,13 @@ public class SurgeCalculator {
         return stateList;
     }
 
+    // Track what we last saved so we don't spam the database with identical updates!
+    private final Map<String, Integer> lastFlushedRides = new ConcurrentHashMap<>();
+
     /**
      * BATCH FLUSHER: Runs every 1 second (1000ms).
-     * It takes the current in-memory state of all zones and does ONE batch save to TiDB.
-     * This makes our system capable of handling millions of events per second!
+     * It takes the current in-memory state of all zones and does ONE batch save to TiDB,
+     * BUT ONLY if the data has actually changed!
      */
     @org.springframework.scheduling.annotation.Scheduled(fixedRate = 1000)
     public void flushStateToDatabase() {
@@ -100,6 +103,11 @@ public class SurgeCalculator {
         for (Map.Entry<String, Integer> entry : zoneRideCounts.entrySet()) {
             String zone = entry.getKey();
             int currentRides = entry.getValue();
+
+            // Only update the database if the active rides actually changed!
+            if (lastFlushedRides.getOrDefault(zone, -1) == currentRides) {
+                continue;
+            }
 
             // Calculate Surge
             double surgeMultiplier = 1.0;
@@ -117,6 +125,7 @@ public class SurgeCalculator {
                     Instant.now().toString()
             );
             repository.save(state);
+            lastFlushedRides.put(zone, currentRides);
             
             log.info("💾 FLUSHED TO DB | Zone: {} | Active Rides: {} | Multiplier: {}x", zone, currentRides, surgeMultiplier);
         }
