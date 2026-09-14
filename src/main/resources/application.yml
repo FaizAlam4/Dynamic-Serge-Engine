@@ -37,9 +37,15 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      max-lifetime: 300000
+      keepalive-time: 60000
+      idle-timeout: 120000
+      connection-test-query: SELECT 1
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     database-platform: org.hibernate.dialect.MySQLDialect
